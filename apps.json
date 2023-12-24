@@ -1,0 +1,57 @@
+{
+    "WinRAR": {
+        "url": "https://www.rarlab.com/rar/winrar-x64-624.exe",
+        "extension": "exe"
+    },
+    "Chrome": {
+        "url": "https://dl.google.com/tag/s/defaultbrowser/edgedl/chrome/install/GoogleChromeStandaloneEnterprise64.msi",
+        "extension": "msi",
+        "arguments": "/quiet /norestart",
+        "postinstall": "Start-Process ms-settings:defaultapps"
+    },
+    "Office": {
+        "url": "https://drive.google.com/uc?export=download&id=1iobbsqm48EEQ3bD_Xk7H-T32xnA9lR0Z&confirm=t",
+        "extension": "zip",
+        "arguments": "/configure $configPath",
+        "preinstall": "Write-OfficeConfig.ps1"
+    },
+    "Kaspersky": {
+        "url": "https://drive.google.com/uc?export=download&id=1NJZe1QtMsugWcGzoVHpshEdnYLTNUvYe&confirm=t",
+        "extension": "exe",
+        "arguments": "/s",
+        "preinstall": "Wait-SAInstallation.ps1"
+    },
+    "Drive": {
+        "url": "https://dl.google.com/drive-file-stream/GoogleDriveSetup.exe",
+        "extension": "exe",
+        "arguments": "--silent"
+    },
+    "SupportAssist": {
+        "url": "https://downloads.dell.com/serviceability/catalog/SupportAssistInstaller.exe",
+        "extension": "exe"
+    },
+    "AdobeReader": {
+        "url": "https://drive.google.com/uc?export=download&id=1uyB73HUIGxBUNAnCqRSacdyRROAj2KQ8&confirm=t",
+        "extension": "exe"
+    },
+    "AnyDesk": {
+        "url": "https://download.anydesk.com/AnyDesk.exe",
+        "extension": "exe"
+    },
+    "NodeJS": {
+        "url": "https://nodejs.org/dist/v20.10.0/node-v20.10.0-x64.msi",
+        "extension": "msi",
+        "arguments": "/quiet"
+    },
+    "VSCode": {
+        "id": "XP9KHM4BK9FZ7Q"
+    },
+    "WhatsApp": {
+        "id": "9NKSQGP7F2NH"
+    },
+    "CpuZ": {
+        "url": "https://download.cpuid.com/cpu-z/cpu-z_2.08-en.exe",
+        "extension": "exe",
+        "arguments": "/VERYSILENT"
+    }
+}
