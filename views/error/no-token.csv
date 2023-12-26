@@ -1,0 +1,1 @@
+Your GitHub API token is not defined.,powershell_inline,$t = Read-Host "Insert your GitHub API token:`n"; Add-Content "$env:appdata\NiniShell\ninishell.cfg" "TOKEN=$t",,Define token,"To use NiniShell, you need to provide a GitHub API token with access to your own NiniShell repository."
