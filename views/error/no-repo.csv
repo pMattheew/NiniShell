@@ -1,1 +1,0 @@
-Your GitHub repository path is not defined.,powershell_inline,$r = Read-Host "Insert your GitHub repository path`n"; Add-Content "$env:appdata\NiniShell\ninishell.cfg" "REPO=$r" ,,Define repository path,"You need to provide the path to your NiniShell repository. The string expected is in this pattern: {username/repo}; 'pMattheew/NiniShell'"
