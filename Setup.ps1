@@ -16,6 +16,24 @@ function Initialize-App {
     Write-Host "App setup finished! Ready to start." 
 }
 
+function Get-Property {
+    param(
+        [PSCustomObject] $obj,
+        [string] $name
+    )
+    Get-Member -InputObject $obj -MemberType Properties -Name $name
+}
+
+function Add-Property {
+    param(
+        [PSCustomObject] $obj,
+        [string] $name,
+        [string] $value
+    )
+
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name $name -Value $value
+}
+
 function Add-Method {
     param(
         [PSCustomObject] $obj,
@@ -58,7 +76,7 @@ function Get-View {
     param([string] $view)
     $v = Get-RepoFile "views/$view/$view.csv"
     $psPath = "$($config.ROOT)\views\$view.ps1"
-    if(-not (Test-Path $psPath)) {
+    if (-not (Test-Path $psPath)) {
         $ps = Get-RepoFile "views/$view/$view.ps1"
         Set-Content $psPath $ps
     }
@@ -66,29 +84,52 @@ function Get-View {
 }
 
 function Initialize-Config {
-    param([bool] $debug = $null)
+    param([bool] $debug = $false)
 
-    $config = @{}
-
-    if($debug -eq $true) { $config.DEBUG = $true }
-
-    $rootPath = "$env:appdata\NiniShell"
-
-    if (-not (Test-Path $rootPath)) {
-        New-Item $rootPath -ItemType Directory > $null
-        New-Item "$rootPath\views" -ItemType Directory > $null 
+    $config = [PSCustomObject]@{
+        root = "$env:appdata\NiniShell"
+        path = "$env:appdata\NiniShell\ninishell.cfg"
     }
+    
+    Add-Method $config "init" {
+        try {
+            if (-not (Test-Path $config.root)) {
+                New-Item $config.root -ItemType Directory > $null
+                New-Item "$($config.root)\views" -ItemType Directory > $null 
+            }   
+        }
+        catch { throw "config.init(): It wasn't possible to create root NiniShell folders.`nError message:`n$_" }
 
-    $configPath = "$env:appdata\NiniShell\ninishell.cfg"
+        if (-not (Test-Path $config.path)) { 
+            $config.append("DEBUG", $debug)
+        }
+        
+        return $config.get()
+    } 
 
-    Add-Content $configPath "ROOT=$rootPath"
+    Add-Method $config "reset" { Remove-Item $config.path }
 
-    Get-Content $configPath | ForEach-Object {
-        $key, $value = $_ -split '='
-        if (-not [string]::IsNullOrWhiteSpace($value)) { 
-            $config[$key] = $value 
+    Add-Method $config "append" {
+        param(
+            [string] $key,
+            [string] $value
+        )
+        Add-Content $config.path "$key=$value"
+        if (-not (Get-Property $config $key)) {
+            Add-Property $config $key $value
         }
     }
+
+    Add-Method $config "get" {
+        Get-Content $config.path | ForEach-Object {
+            $key, $value = $_ -split '='
+            if (-not [string]::IsNullOrWhiteSpace($value)) { 
+                Add-Property $config $key $value
+            }
+        }
+    }
+
+    $config.init()
 
     $global:config = $config
 }
@@ -133,7 +174,7 @@ function Initialize-Gui {
             [string] $view
         )
 
-        if($view) { $gui.add((Get-View $view)) }
+        if ($view) { $gui.add((Get-View $view)) }
 
         $process = Start-Process powershell -ArgumentList "-Command & { Show-ScriptMenuGui -csvPath '$($gui.path)' -windowTitle '$windowTitle' -iconPath '$($icons.$icon)' -Verbose -noExit }" -PassThru
 
