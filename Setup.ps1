@@ -16,14 +16,6 @@ function Initialize-App {
     Write-Host "App setup finished! Ready to start." 
 }
 
-function Get-Property {
-    param(
-        [PSCustomObject] $obj,
-        [string] $name
-    )
-    Get-Member -InputObject $obj -MemberType Properties -Name $name
-}
-
 function Add-Property {
     param(
         [PSCustomObject] $obj,
@@ -115,7 +107,7 @@ function Initialize-Config {
             [string] $value
         )
         Add-Content $config.path "$key=$value"
-        if (-not (Get-Property $config $key)) {
+        if (-not $config.$key) {
             Add-Property $config $key $value
         }
     }
