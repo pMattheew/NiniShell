@@ -18,6 +18,77 @@ function Initialize-App {
     Write-Host "App setup finished! Ready to start." 
 }
 
+function Add-Method {
+    param(
+        [PSCustomObject] $obj,
+        [string] $name,
+        [scriptblock] $value
+    )
+    Add-Member -InputObject $obj -MemberType ScriptMethod -Name $name -Value $value
+}
+
+function Get-RepoFile {
+    param(
+        [string] $file,
+        [string] $repo = 'pMattheew/ninishell'
+    )
+
+    $src = "https://raw.githubusercontent.com/$repo/main/$file"
+
+    try {
+        if ($config.TOKEN) {
+            $src = "https://api.github.com/repos/$repo/contents/$file"
+            $headers = @{
+                'Accept'               = 'application/json'
+                'Authorization'        = "Bearer $($config.TOKEN)"
+                'X-GitHub-Api-Version' = '2022-11-28'
+            }
+    
+            $response = Invoke-WebRequest -UseBasicParsing -Uri $src -Headers $headers | ConvertFrom-Json
+            $result = Invoke-WebRequest -UseBasicParsing -Uri $response.download_url
+        }
+        else { $result = Invoke-WebRequest -UseBasicParsing -Uri $src }
+    }
+    catch { throw "Couldn't fetch '$file'. Error message:`n$_" }
+
+    return $result
+}
+
+function Get-View {
+    param([string] $view)
+    $v = Get-RepoFile "views/$view/$view.csv"
+    $psPath = "$($config.ROOT)\views\$view.ps1"
+    if(-not (Test-Path $psPath)) {
+        $ps = Get-RepoFile "views/$view/$view.ps1"
+        Set-Content $psPath $ps
+    }
+    return $v
+}
+
+function Initialize-Config {
+    $config = @{}
+
+    $rootPath = "$env:appdata\NiniShell"
+
+    if (-not (Test-Path $rootPath)) {
+        New-Item $rootPath -ItemType Directory > $null
+        New-Item "$rootPath\views" -ItemType Directory > $null 
+    }
+
+    $configPath = "$env:appdata\NiniShell\ninishell.cfg"
+
+    Add-Content $configPath "ROOT=$rootPath"
+
+    Get-Content $configPath | ForEach-Object {
+        $key, $value = $_ -split '='
+        if (-not [string]::IsNullOrWhiteSpace($value)) { 
+            $config[$key] = $value 
+        }
+    }
+
+    $global:config = $config
+}
+
 function Initialize-Gui {
     if (-not (Get-Module -ListAvailable -Name "PSScriptMenuGui")) {
         Install-Module PSScriptMenuGui -Scope CurrentUser -Force
@@ -65,77 +136,6 @@ function Initialize-Gui {
     $gui.reset()
 
     $global:gui = $gui
-}
-
-function Add-Method {
-    param(
-        [PSCustomObject] $obj,
-        [string] $name,
-        [scriptblock] $value
-    )
-    Add-Member -InputObject $obj -MemberType ScriptMethod -Name $name -Value $value
-}
-
-function Initialize-Config {
-    $config = @{}
-
-    $rootPath = "$env:appdata\NiniShell"
-
-    if (-not (Test-Path $rootPath)) {
-        New-Item $rootPath -ItemType Directory > $null
-        New-Item "$rootPath\views" -ItemType Directory > $null 
-    }
-
-    $configPath = "$env:appdata\NiniShell\ninishell.cfg"
-
-    Add-Content $configPath "ROOT=$rootPath"
-
-    Get-Content $configPath | ForEach-Object {
-        $key, $value = $_ -split '='
-        if (-not [string]::IsNullOrWhiteSpace($value)) { 
-            $config[$key] = $value 
-        }
-    }
-
-    $global:config = $config
-}
-
-function Get-RepoFile {
-    param(
-        [string] $file,
-        [string] $repo = 'pMattheew/ninishell'
-    )
-
-    $src = "https://raw.githubusercontent.com/$repo/main/$file"
-
-    try {
-        if ($config.TOKEN) {
-            $src = "https://api.github.com/repos/$repo/contents/$file"
-            $headers = @{
-                'Accept'               = 'application/json'
-                'Authorization'        = "Bearer $($config.TOKEN)"
-                'X-GitHub-Api-Version' = '2022-11-28'
-            }
-    
-            $response = Invoke-WebRequest -UseBasicParsing -Uri $src -Headers $headers | ConvertFrom-Json
-            $result = Invoke-WebRequest -UseBasicParsing -Uri $response.download_url
-        }
-        else { $result = Invoke-WebRequest -UseBasicParsing -Uri $src }
-    }
-    catch { throw "Couldn't fetch '$file'. Error message:`n$_" }
-
-    return $result
-}
-
-function Get-View {
-    param([string] $view)
-    $v = Get-RepoFile "views/$view/$view.csv"
-    $psPath = "$($config.ROOT)\views\$view.ps1"
-    if(-not (Test-Path $psPath)) {
-        $ps = Get-RepoFile "views/$view/$view.ps1"
-        Set-Content $psPath $ps
-    }
-    return $v
 }
 
 try {
