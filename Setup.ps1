@@ -8,9 +8,7 @@ function Initialize-App {
 
     # check if $repo is set. $token should be optional
     if (-not $config.REPO) {
-        $v = Get-View "no-repo"
-        $gui.add($v)
-        $gui.show("There was an error when trying to launch NiniShell", "error")
+        $gui.show("There was an error when trying to launch NiniShell", "error", "no-repo")
     }
  
 
@@ -131,8 +129,11 @@ function Initialize-Gui {
     Add-Method $gui "show" {
         param(
             [string] $windowTitle,
-            [string] $icon = "logo"
+            [string] $icon = "logo",
+            [string] $view
         )
+
+        if($view) { $gui.add((Get-View $view)) }
 
         $process = Start-Process powershell -ArgumentList "-Command & { Show-ScriptMenuGui -csvPath '$($gui.path)' -windowTitle '$windowTitle' -iconPath '$($icons.$icon)' -Verbose -noExit }" -PassThru
 
