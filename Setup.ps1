@@ -2,7 +2,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 function Initialize-App {
 
-    Initialize-Config # exposes $config
+    Initialize-Config $true # exposes $config
 
     Initialize-Gui # exposes $gui
 
@@ -35,6 +35,8 @@ function Get-RepoFile {
 
     $src = "https://raw.githubusercontent.com/$repo/main/$file"
 
+    if ($global:config.DEBUG -eq $true) { $src = "$(Get-Location)/$file" }
+
     try {
         if ($config.TOKEN) {
             $src = "https://api.github.com/repos/$repo/contents/$file"
@@ -66,7 +68,11 @@ function Get-View {
 }
 
 function Initialize-Config {
+    param([bool] $debug = $null)
+
     $config = @{}
+
+    if($debug -eq $true) { $config.DEBUG = $true }
 
     $rootPath = "$env:appdata\NiniShell"
 
