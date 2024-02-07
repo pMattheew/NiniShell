@@ -1,41 +1,37 @@
 $ProgressPreference = 'SilentlyContinue'
 
 function Initialize-App {
+    param([switch] $verbose)
 
-    Initialize-Config $true # exposes $config
+    if ($verbose) { $VerbosePreference = "Continue" }
 
-    Initialize-Gui # exposes $gui
+    . "$(Get-Location)\modules\object-helper.ps1"
+    . "$(Get-Location)\modules\config.ps1"
+    . "$(Get-Location)\modules\cli.ps1"
 
-    # check if $repo is set. $token should be optional
-    if (-not $config.REPO) {
-        $gui.show("There was an error when trying to launch NiniShell", "error", "no-repo")
-    }
- 
+    $global:config = Initialize-Config
 
-    # do request for config.json
-    Write-Host "App setup finished! Ready to start." 
+    $global:cli = Initialize-Cli
+
+    $cli.show()
+
+    # Get-ChildItem "$(Get-Location)\components" | ForEach-Object {
+    #     write-host $_
+    # }
+
+#     Write-Host -ForegroundColor Magenta '
+# 888b    888 d8b          d8b  .d8888b.  888               888 888 
+# 8888b   888 Y8P          Y8P d88P  Y88b 888               888 888 
+# 88888b  888                  Y88b.      888               888 888 
+# 888Y88b 888 888 88888b.  888  "Y888b.   88888b.   .d88b.  888 888 
+# 888 Y88b888 888 888 "88b 888     "Y88b. 888 "88b d8P  Y8b 888 888 
+# 888  Y88888 888 888  888 888       "888 888  888 88888888 888 888 
+# 888   Y8888 888 888  888 888 Y88b  d88P 888  888 Y8b.     888 888 
+# 888    Y888 888 888  888 888  "Y8888P"  888  888  "Y8888  888 888 
+# '
 }
 
-function Add-Property {
-    param(
-        [PSCustomObject] $obj,
-        [string] $name,
-        [string] $value
-    )
-
-    Add-Member -InputObject $obj -MemberType NoteProperty -Name $name -Value $value
-}
-
-function Add-Method {
-    param(
-        [PSCustomObject] $obj,
-        [string] $name,
-        [scriptblock] $value
-    )
-    Add-Member -InputObject $obj -MemberType ScriptMethod -Name $name -Value $value
-}
-
-function Get-RepoFile {
+function Fetch {
     param(
         [string] $file,
         [string] $repo = 'pMattheew/ninishell'
@@ -43,7 +39,7 @@ function Get-RepoFile {
 
     $src = "https://raw.githubusercontent.com/$repo/main/$file"
 
-    if ($global:config.DEBUG -eq $true) { $src = "$(Get-Location)/$file" }
+    if ($VerbosePreference -eq "Continue") { $src = "$(Get-Location)/$file" }
 
     try {
         if ($config.TOKEN) {
@@ -64,128 +60,7 @@ function Get-RepoFile {
     return $result
 }
 
-function Get-View {
-    param([string] $view)
-    $v = Get-RepoFile "views/$view/$view.csv"
-    $psPath = "$($config.ROOT)\views\$view.ps1"
-    if (-not (Test-Path $psPath)) {
-        $ps = Get-RepoFile "views/$view/$view.ps1"
-        Set-Content $psPath $ps
-    }
-    return $v
-}
-
-function Initialize-Config {
-    param([bool] $debug = $false)
-
-    $config = [PSCustomObject]@{
-        root = "$env:appdata\NiniShell"
-        path = "$env:appdata\NiniShell\ninishell.cfg"
-    }
-    
-    Add-Method $config "init" {
-        try {
-            if (-not (Test-Path $config.root)) {
-                New-Item $config.root -ItemType Directory > $null
-                New-Item "$($config.root)\views" -ItemType Directory > $null 
-            }   
-        }
-        catch { throw "config.init(): It wasn't possible to create root NiniShell folders.`nError message:`n$_" }
-
-        if (-not (Test-Path $config.path)) { 
-            $config.append("DEBUG", $debug)
-        }
-        
-        return $config.get()
-    } 
-
-    Add-Method $config "reset" { Remove-Item $config.path }
-
-    Add-Method $config "append" {
-        param(
-            [string] $key,
-            [string] $value
-        )
-        Add-Content $config.path "$key=$value"
-        if (-not $config.$key) {
-            Add-Property $config $key $value
-        }
-    }
-
-    Add-Method $config "get" {
-        Get-Content $config.path | ForEach-Object {
-            $key, $value = $_ -split '='
-            if (-not [string]::IsNullOrWhiteSpace($value)) { 
-                Add-Property $config $key $value
-            }
-        }
-    }
-
-    $config.init()
-
-    $global:config = $config
-}
-
-function Initialize-Gui {
-    if (-not (Get-Module -ListAvailable -Name "PSScriptMenuGui")) {
-        Install-Module PSScriptMenuGui -Scope CurrentUser -Force
-    }
-    Import-Module PSScriptMenuGui
-    
-    $gui = [PSCustomObject]@{ path = "$env:temp\ninishell-view.csv" }
-    
-    # Get icons
-    function Get-Icon {
-        param([string] $name)
-        $path = "$($config.ROOT)\$name"
-        if (Test-Path $path) { return $path }
-        $res = Get-RepoFile "assets/$name"
-        [IO.File]::WriteAllBytes($path, $res.Content)
-        return $path
-    }
-
-    $global:icons = @{
-        logo  = Get-Icon "ninishell-logo.ico"
-        error = Get-Icon "error.ico"
-    }
-
-    # Add methods
-    Add-Method $gui "reset" {
-        Set-Content $gui.path "Section,Method,Command,Arguments,Name,Description"
-    }
-
-    Add-Method $gui "add" {
-        param([string] $content)
-        Add-Content $gui.path $content
-    }
-
-    Add-Method $gui "show" {
-        param(
-            [string] $windowTitle,
-            [string] $icon = "logo",
-            [string] $view
-        )
-
-        if ($view) { $gui.add((Get-View $view)) }
-
-        $process = Start-Process powershell -ArgumentList "-Command & { Show-ScriptMenuGui -csvPath '$($gui.path)' -windowTitle '$windowTitle' -iconPath '$($icons.$icon)' -Verbose -noExit }" -PassThru
-
-        Wait-Process $process.Id
-    }
-
-    $gui.reset()
-
-    $global:gui = $gui
-}
-
-try {
-    Initialize-App
-}
-finally {
-    Remove-Item "$env:temp\ninishell-view.csv"
-}
-
-
+Initialize-App -Verbose
 
 
 # function Get-GitHubFile {
