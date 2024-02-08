@@ -2,7 +2,16 @@
 
 function Initialize-Cli {
 
-    $cli = [PSCustomObject]@{ closed = $false }    
+    $cli = [PSCustomObject]@{ closed = $false }
+    
+    Add-Method $cli "init" {
+        $global:apps = $()
+
+        Get-ChildItem "$(Get-Location)\components" | ForEach-Object {
+            $component = Split-Path $_ -Leaf
+            . "$_\$component-view.ps1"
+        }
+    }
 
     Add-Method $cli "show" {
         while (-not $cli.closed) {

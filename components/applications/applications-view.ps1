@@ -1,4 +1,6 @@
-$view = [PSCustomObject]@{
+. "$(Get-Location)\components\applications\applications.ps1"
+
+$global:apps += [PSCustomObject]@{
     option = "Install applications"
     interface = {
         Initialize-Applications

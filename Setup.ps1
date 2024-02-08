@@ -13,6 +13,8 @@ function Initialize-App {
 
     $global:cli = Initialize-Cli
 
+    $cli.init()
+
     $cli.show()
 
     # Get-ChildItem "$(Get-Location)\components" | ForEach-Object {
